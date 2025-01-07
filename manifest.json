@@ -2,7 +2,7 @@
   "Name": "Autonomals",
   "Author": "DespairScent",
   "Version": "1.1.0",
-  "Description": "Gives animals freedom of movement regardless of the player's current location",
+  "Description": "Prevents farm animals from \"freezing\" when there are no players on the farm",
   "UniqueID": "DespairScent.Autonomals",
   "EntryDll": "Autonomals.dll",
   "MinimumApiVersion": "4.0.0",
