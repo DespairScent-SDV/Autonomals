@@ -1,7 +1,7 @@
 ﻿{
   "Name": "Autonomals",
   "Author": "DespairScent",
-  "Version": "1.1.0",
+  "Version": "1.2.0",
   "Description": "Prevents farm animals from \"freezing\" when there are no players on the farm",
   "UniqueID": "DespairScent.Autonomals",
   "EntryDll": "Autonomals.dll",
