@@ -12,6 +12,7 @@ namespace DespairScent.Autonomals
         public const string LOCATIONS_BUILDABLE_ONLY = "Buildable Only";
         public const string LOCATIONS_FARM_ONLY = "Farm Only";
 
+        public bool Enabled = true;
         public string AllowedLocations = LOCATIONS_BUILDABLE_ONLY;
     }
 }

@@ -38,6 +38,13 @@ namespace DespairScent.Autonomals
                 save: () => Helper.WriteConfig(Config)
             );
 
+            configMenu.AddBoolOption(
+                mod: this.ModManifest,
+                name: () => "Enabled",
+                tooltip: () => "Toggles mod functionality",
+                getValue: () => Config.Enabled,
+                setValue: value => Config.Enabled = value
+            );
             configMenu.AddTextOption(
                 mod: this.ModManifest,
                 name: () => "Allowed locations",
@@ -54,7 +61,8 @@ namespace DespairScent.Autonomals
 
         private static bool PatchFarmAnimalsUpdate(FarmAnimal __instance, Building currentBuilding, GameTime time, GameLocation environment)
         {
-            if (currentBuilding == null && Config.AllowedLocations switch
+            
+            if (currentBuilding == null && Config.Enabled && Config.AllowedLocations switch
             {
                 ModConfig.LOCATIONS_BUILDABLE_ONLY => environment.IsBuildableLocation(),
                 ModConfig.LOCATIONS_FARM_ONLY => environment == Game1.getFarm(),
