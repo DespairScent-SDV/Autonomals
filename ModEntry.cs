@@ -1,52 +1,58 @@
 ﻿using HarmonyLib;
-using StardewModdingAPI;
-using StardewValley;
 using Microsoft.Xna.Framework;
-using StardewValley.Buildings;
+using StardewModdingAPI;
 using StardewModdingAPI.Events;
+using StardewValley;
+using StardewValley.Buildings;
 
 namespace DespairScent.Autonomals
 {
     internal sealed class ModEntry : Mod
     {
+        private static ModEntry Mod;
 
-        private static ModConfig Config;
+        private ModConfig Config;
 
         public override void Entry(IModHelper helper)
         {
-            Config = helper.ReadConfig<ModConfig>();
+            Mod = this;
 
-            var harmony = new Harmony(this.ModManifest.UniqueID);
+            Mod.Config = helper.ReadConfig<ModConfig>();
+
+            var harmony = new Harmony(Mod.ModManifest.UniqueID);
 
             harmony.Patch(AccessTools.Method(typeof(FarmAnimal), nameof(FarmAnimal.updateWhenNotCurrentLocation)),
-               prefix: new HarmonyMethod(typeof(ModEntry), nameof(PatchFarmAnimalsUpdate)));
+               prefix: new HarmonyMethod(typeof(ModEntry), nameof(PatchUpdateWhenNotCurrentLocation)));
 
-            helper.Events.GameLoop.GameLaunched += this.OnGameLaunched;
+            harmony.Patch(AccessTools.Method(typeof(FarmAnimal), nameof(FarmAnimal.updateWhenCurrentLocation)),
+               prefix: new HarmonyMethod(typeof(ModEntry), nameof(PatchUpdateWhenCurrentLocation)));
+
+            helper.Events.GameLoop.GameLaunched += Mod.OnGameLaunched;
         }
 
         private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
         {
-            var configMenu = this.Helper.ModRegistry.GetApi<IGenericModConfigMenuApi>("spacechase0.GenericModConfigMenu");
-            if (configMenu is null)
+            var configMenu = Mod.Helper.ModRegistry.GetApi<IGenericModConfigMenuApi>("spacechase0.GenericModConfigMenu");
+            if (configMenu == null)
             {
                 return;
             }
 
             configMenu.Register(
-                mod: this.ModManifest,
-                reset: () => Config = new ModConfig(),
-                save: () => Helper.WriteConfig(Config)
+                mod: Mod.ModManifest,
+                reset: () => Mod.Config = new ModConfig(),
+                save: () => Helper.WriteConfig(Mod.Config)
             );
 
             configMenu.AddBoolOption(
-                mod: this.ModManifest,
+                mod: Mod.ModManifest,
                 name: () => "Enabled",
                 tooltip: () => "Toggles mod functionality",
-                getValue: () => Config.Enabled,
-                setValue: value => Config.Enabled = value
+                getValue: () => Mod.Config.Enabled,
+                setValue: value => Mod.Config.Enabled = value
             );
             configMenu.AddTextOption(
-                mod: this.ModManifest,
+                mod: Mod.ModManifest,
                 name: () => "Allowed locations",
                 tooltip: () => "Locations on which the mod will have effect. Change only if really necessary.",
                 allowedValues: new string[] {
@@ -54,24 +60,41 @@ namespace DespairScent.Autonomals
                     ModConfig.LOCATIONS_BUILDABLE_ONLY,
                     ModConfig.LOCATIONS_FARM_ONLY
                 },
-                getValue: () => Config.AllowedLocations,
-                setValue: value => Config.AllowedLocations = value
+                getValue: () => Mod.Config.AllowedLocations,
+                setValue: value => Mod.Config.AllowedLocations = value
             );
         }
 
-        private static bool PatchFarmAnimalsUpdate(FarmAnimal __instance, Building currentBuilding, GameTime time, GameLocation environment)
+
+        private static HashSet<long> _updatedAnimals = new();
+        private static TimeSpan _updatedAnimalsAt;
+
+        private static bool PatchUpdateWhenNotCurrentLocation(FarmAnimal __instance, Building currentBuilding, GameTime time, GameLocation environment)
         {
-            
-            if (currentBuilding == null && Config.Enabled && Config.AllowedLocations switch
+            if (currentBuilding == null && Mod.Config.Enabled && Mod.Config.AllowedLocations switch
             {
                 ModConfig.LOCATIONS_BUILDABLE_ONLY => environment.IsBuildableLocation(),
                 ModConfig.LOCATIONS_FARM_ONLY => environment == Game1.getFarm(),
                 _ => true
             })
             {
-                __instance.updateWhenCurrentLocation(time, environment);
-                return false;
+                if (!(time.TotalGameTime.Equals(_updatedAnimalsAt) && _updatedAnimals.Contains(__instance.myID.Value)))
+                {
+                    __instance.updateWhenCurrentLocation(time, environment);
+                    return false;
+                }
             }
+            return true;
+        }
+
+        private static bool PatchUpdateWhenCurrentLocation(FarmAnimal __instance, GameTime time, GameLocation location)
+        {
+            if (!time.TotalGameTime.Equals(_updatedAnimalsAt))
+            {
+                _updatedAnimalsAt = time.TotalGameTime;
+                _updatedAnimals.Clear();
+            }
+            _updatedAnimals.Add(__instance.myID.Value);
             return true;
         }
 
